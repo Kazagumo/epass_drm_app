@@ -135,6 +135,28 @@ static inline int DRM_IOCTL(int fd, unsigned long cmd, void *arg)
      }
     }
 }
+
+void mb32dec (int width, int height, uint16_t* out, uint8_t* luma, uint8_t* chroma)
+{
+  int x, y, cy;
+  uint32_t *ptr = (uint32_t*)out;
+  for(y = 0; y < height; y++)
+  {
+    cy = y / 2;
+    for(x = 0; x < width; x += 32)
+    {
+      uint32_t* pl = ((uint32_t*)(luma + (x / 32) * 1024 + (x % 32) + ((y % 32) * 32) + ((y / 32) * (((width + 31) / 32) * 1024))));
+      uint32_t* pc = ((uint32_t*)(chroma + (x / 32) * 1024 + ((x % 32) / 2 * 2) + ((cy % 32) * 32) + ((cy / 32) * (((width + 31) / 32) * 1024))));
+      for(int i = 0; i < 8; i++)
+      {
+        uint32_t Y = *pl++;
+        uint32_t C = *pc++;
+        *ptr++ = ((Y & 0x0000ff00) << 16) | ((C & 0x000000ff) << 16) | ((Y & 0x000000ff) << 8) | ((C & 0x0000ff00) >> 8);
+        *ptr++ = (Y & 0xff000000) | (C & 0x00ff0000) | ((Y & 0x00ff0000) >> 8) | ((C & 0xff000000) >> 24);
+      }
+    }
+  }
+}
  
  static int modeset_create_fb(int fd, struct buffer_object *bo,int planemode,int bpp,uint64_t modifier)
  {
@@ -409,7 +431,8 @@ err_destroy:
     // vConfig.bScaleDownEn = 0;
     // vConfig.nHorizonScaleDownRatio = 0;
     // vConfig.nVerticalScaleDownRatio = 0;
-    vConfig.eOutputPixelFormat = PIXEL_FORMAT_YV12;
+    // vConfig.eOutputPixelFormat = PIXEL_FORMAT_YV12;
+    vConfig.eOutputPixelFormat = PIXEL_FORMAT_NV12;
     // vConfig.nDeInterlaceHoldingFrameBufferNum = 0;
     // vConfig.nDisplayHoldingFrameBufferNum = 0;
     // vConfig.nRotateHoldingFrameBufferNum = 0;
@@ -718,10 +741,15 @@ int is_first_frame = 1;
                     // memcpy(outbuf+nwidth*nheight,videoPicture->pData1,nwidth*nheight/4);
                     // memcpy(outbuf+nwidth*nheight*5/4,videoPicture->pData2,nwidth*nheight/4);
 
-                    memcpy(chroma_buf,videoPicture->pData1,nwidth*nheight/4);
-                    memcpy(chroma_buf+nwidth*nheight/4,videoPicture->pData2,nwidth*nheight/4);
+                    // memcpy(chroma_buf,videoPicture->pData1,nwidth*nheight/4);
+                    // memcpy(chroma_buf+nwidth*nheight/4,videoPicture->pData2,nwidth*nheight/4);
 
-                    yuvmb32_2_rgb565(nwidth, nheight, outbuf, videoPicture->pData0, chroma_buf);
+                    // // yuvmb32_2_rgb565(nwidth, nheight, outbuf, videoPicture->pData0, chroma_buf);
+                    // mb32dec(nwidth, nheight, outbuf, videoPicture->pData0, chroma_buf);
+
+                    memcpy(outbuf,videoPicture->pData0,nwidth*nheight);
+                    memcpy(outbuf+nwidth*nheight,videoPicture->pData1,nwidth*nheight/2);
+                    
                     
                     // printf("returning picture to video decoder\n");
                         /**return the picture buf to video decoder**/
@@ -761,6 +789,84 @@ int is_first_frame = 1;
     return 0;
     
  }
+
+uint8_t* init_defe_layer0(int fd,int width,int height,uint8_t **vaddr_out,int* fb_id_out){
+    struct drm_mode_create_dumb creq = {0};
+	struct drm_mode_destroy_dumb dreq = {0};
+	struct drm_mode_map_dumb mreq = {0};
+    uint32_t handles[4] = {0}, pitches[4] = {0}, offsets[4] = {0};
+    uint64_t modifiers[4] = {0};
+    int ret;
+
+    printf("set creq in\n");
+
+
+    creq.width = width;
+    creq.height = height * 3 / 2;;
+    creq.bpp = 8;
+
+    printf("creq out\n");
+
+    ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &creq);
+    if (ret < 0) {
+        fprintf(stderr, "cannot create dumb buffer (%d): %m\n",
+            errno);
+        return -errno;
+    }
+
+    printf("ioctl out\n");
+
+    offsets[0] = 0;
+    handles[0] = creq.handle;
+    pitches[0] = creq.pitch;
+    modifiers[0] = DRM_FORMAT_MOD_ALLWINNER_TILED;
+
+    offsets[1] = creq.pitch * height;
+    handles[1] = creq.handle;
+    pitches[1] = creq.pitch;
+    modifiers[1] = DRM_FORMAT_MOD_ALLWINNER_TILED;
+
+    int fb_id;
+
+    ret = drmModeAddFB2WithModifiers(fd, width, height,
+        DRM_FORMAT_NV12, handles, pitches, offsets,modifiers,&fb_id, DRM_MODE_FB_MODIFIERS);
+    // ret = drmModeAddFB2WithModifiers(fd, width, height,
+    //     DRM_FORMAT_NV12, handles, pitches, offsets,modifiers,&fb_id, 0);
+    printf("drm add in\n");
+    
+    // ret = drmModeAddFB2(fd, width, height,
+    //     DRM_FORMAT_RGB565, handles, pitches, offsets,&fb_id, 0);
+
+    if(ret ){
+        printf("drmModeAddFB2 return err %d\n",ret);
+        return 0;
+    }
+
+    printf("drm add out\n");
+
+    /* prepare buffer for memory mapping */
+	memset(&mreq, 0, sizeof(mreq));
+	mreq.handle = creq.handle;
+	ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
+	if (ret) {
+		fprintf(stderr, "1st cannot map dumb buffer (%d): %m\n",
+			errno);
+		return -1;
+	}
+
+    uint8_t* vaddr;
+	/* perform actual memory mapping */
+	vaddr = mmap(0, width * height * 3 /2 , PROT_READ | PROT_WRITE, MAP_SHARED,
+		        fd, mreq.offset);
+	if (vaddr == MAP_FAILED) {
+		fprintf(stderr, "2nd cannot mmap dumb buffer (%d): %m\n",
+			errno);
+		return -1;
+	}
+    *vaddr_out = vaddr;
+    *fb_id_out = fb_id;
+    return 0;
+}
  
 
 int main(int argc, char **argv)
@@ -852,7 +958,12 @@ int main(int argc, char **argv)
 
     plane_buf[0].width = VIDEOWIDTH;
     plane_buf[0].height = VIDEOHEIGHT;
-    modeset_create_fb(fd, &plane_buf[0], DRM_FORMAT_RGB565,16,0);
+    // modeset_create_fb(fd, &plane_buf[0], DRM_FORMAT_VYUY,16,0);
+
+
+    ret = init_defe_layer0(fd,352,640,&plane_buf[0].vaddr,&plane_buf[0].fb_id);
+    if(ret < 0)
+        printf("init_defe_layer0 err %d\n",ret);
 
     printf("lets start JPEG DECODING!!!\n");
 
