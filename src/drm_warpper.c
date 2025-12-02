@@ -149,6 +149,22 @@ int drm_warpper_init_layer(drm_warpper_t *drm_warpper,int layer_id,int width,int
         log_error("2nd cannot mmap dumb buffer (%d): %m\n", errno);
       return -1;
     }
+
+    if(layer_id == DRM_WARPPER_LAYER_UI){
+        drmModeObjectPropertiesPtr props = drmModeObjectGetProperties(drm_warpper->fd, drm_warpper->plane_res->planes[layer_id], DRM_MODE_OBJECT_PLANE);
+        int i = 0;
+        for (i = 0; i < (int)props->count_props; ++i) {
+            drmModePropertyPtr prop = drmModeGetProperty(drm_warpper->fd, props->props[i]);
+            if (strcmp(prop->name, "alpha") == 0) {
+                drm_warpper->ui_layer_alpha_prop_id = prop->prop_id;
+                break;
+            }
+        }
+        if(i == (int)props->count_props){
+            log_warn("failed to find alpha property");
+        }
+        drm_warpper->ui_layer_alpha_prop_id = props->props[i];
+    }
     return 0;
 }
 
@@ -189,3 +205,16 @@ int drm_warpper_set_layer_position(drm_warpper_t *drm_warpper,int layer_id,int x
     return 0;
 }
 
+
+int drm_warpper_set_ui_alpha(drm_warpper_t *drm_warpper, int alpha){
+    int ret = drmModeObjectSetProperty(
+        drm_warpper->fd, 
+        drm_warpper->plane_res->planes[DRM_WARPPER_LAYER_UI], 
+        DRM_MODE_OBJECT_PLANE,
+        drm_warpper->ui_layer_alpha_prop_id, 
+        alpha
+    );
+    if (ret < 0)
+        log_error("drmModeObjectSetProperty err %d", ret);
+    return 0;
+}

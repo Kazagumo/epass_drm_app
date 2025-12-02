@@ -6,10 +6,11 @@
 #include "memoryAdapter.h"
 #include <stdint.h>
 #include <pthread.h>
+#include "config.h"
 
 /* fixed output frame size */
-#define MEDIAPLAYER_FRAME_WIDTH   352
-#define MEDIAPLAYER_FRAME_HEIGHT  640
+#define MEDIAPLAYER_FRAME_WIDTH   VIDEO_WIDTH
+#define MEDIAPLAYER_FRAME_HEIGHT  VIDEO_HEIGHT
 
 /* internal state flags */
 #define MEDIAPLAYER_PARSER_ERROR   (1 << 0)
@@ -38,10 +39,17 @@ typedef struct {
     MultiThreadCtx       thread;
 
     char                 input_uri[256];
+    char                 video_path[256];
     uint8_t             *output_buf;
     int                  running;
     int                  framerate;
 } mediaplayer_t;
+
+typedef enum {
+    MP_STATUS_PLAYING,
+    MP_STATUS_STOPPED,
+    MP_STATUS_ERROR,
+} mp_status_t;
 
 /* initialize mediaplayer context */
 int mediaplayer_init(mediaplayer_t *mediaplayer);
@@ -54,3 +62,16 @@ int mediaplayer_play_video(mediaplayer_t *mediaplayer, const char *file, uint8_t
 
 /* stop current decoding if running */
 int mediaplayer_stop(mediaplayer_t *mediaplayer);
+
+/* set video file path (takes effect on next play) */
+int mediaplayer_set_video(mediaplayer_t *mediaplayer, const char *path);
+
+/* start playback (non-blocking) */
+int mediaplayer_start(mediaplayer_t *mediaplayer);
+
+
+/* get current status: "stopped", "playing", */
+mp_status_t mediaplayer_get_status(mediaplayer_t *mediaplayer);
+
+/* set output buffer */
+void mediaplayer_set_output_buffer(mediaplayer_t *mediaplayer, uint8_t *buf);

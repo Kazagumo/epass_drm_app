@@ -1,6 +1,6 @@
 # 电子通行证播放器程序
 
-调用全志Cedar库，实现通行证视频播放等功能。
+调用全志Cedar库，实现通行证视频播放/切换等功能。
 
 # 编译方法
 
@@ -25,8 +25,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libcedarx/libcore/parser/include
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libcedarx/libcore/stream/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/libcedarx/external/include/adecoder)
 ```
-7. 在本repo目录下运行cmake . && make,若正常则终端显示此日志且本repo目录中出现epass_drm_app二进制文件
+7. 在本repo目录下运行cmake . && make,若正常则终端显示此日志且本repo目录中出现mediaplayerd二进制文件
 ```
-[100%] Built target epass_drm_app
+[100%] Built target mediaplayerd
 ```
 至此编译环境搭建完毕，可以使用此环境进行进一步开发
