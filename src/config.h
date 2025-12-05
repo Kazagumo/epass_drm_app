@@ -31,6 +31,11 @@
 #define UI_CONFIG_MAGIC 0x45504153434F4E46
 #define UI_CONFIG_VERSION 1
 
+#define UI_BATTERY_ADC_PATH "/sys/bus/iio/devices/iio:device0/in_voltage0_raw"
+#define UI_BATTERY_ADC_EMPTY_VALUE 2100
+#define UI_BATTERY_ADC_FULL_VALUE 2500
+#define UI_BATTERY_ADC_CHARGING_VALUE 2650
+
 #define PRTS_ASSET_PATH "/assets"
 #define PRTS_MAX_OPERATORS 50
 #define PRTS_OVERLAY_FILENAME "overlay.argb"

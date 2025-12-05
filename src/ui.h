@@ -57,6 +57,7 @@ typedef struct {
     char transition_bitmap_path[128];
     char operator_info_path[128];
     void (*transition_middle_cb[UI_TRANSITION_MIDDLE_CB_COUNT])(void);
+
 } ui_t;
 
 void ui_init(ui_t *ui,int width,int height,uint32_t* vaddr,drm_warpper_t *drm_warpper);

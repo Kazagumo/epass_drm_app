@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -314,6 +315,47 @@ static void ui_transition_tick(ui_t *ui){
     ui->transition_state = TRANSITION_NONE;
 }
 
+static void draw_battery_level(ui_t *ui){
+    int fd;
+    char buf[32];
+    fd = open(UI_BATTERY_ADC_PATH, O_RDONLY);
+    if (fd < 0) {
+        log_error("failed to open battery adc file");
+        return;
+    }
+    read(fd, buf, sizeof(buf));
+    close(fd);
+
+    int battery_level_width = 200;
+    int battery_level_height = 20;
+    int battery_level_x = 10;
+    int battery_level_y = UI_HEIGHT - 120;
+
+    int battery_val = atoi(buf);
+    if(battery_val > UI_BATTERY_ADC_CHARGING_VALUE){
+        CRREFont_printStr(ui->font, battery_level_x, battery_level_y, "Battery: Charging...");
+        return;
+    }
+    int battery_level = (battery_val - UI_BATTERY_ADC_EMPTY_VALUE) * 100 / (UI_BATTERY_ADC_FULL_VALUE - UI_BATTERY_ADC_EMPTY_VALUE);
+    if(battery_level > 100) battery_level = 100;
+    if(battery_level < 0) battery_level = 0;
+    int battery_bar_color = 0xFF00FF00;
+    if (battery_level < 20) 
+        battery_bar_color = 0xFFFF0000;
+    else if(battery_level < 30)
+        battery_bar_color = 0xFFFFFF00;
+    else
+        battery_bar_color = 0xFF00FF00;
+
+    // round to nearest 10
+    battery_level = (battery_level + 5) / 10;
+    battery_level = battery_level * 10;
+
+    CRREFont_printf(ui->font, battery_level_x, battery_level_y, "Battery:%d", battery_level);
+    fbdraw_fill_rect(ui->drawer, battery_level_x + 130, battery_level_y, battery_level_width, battery_level_height, 0xFF404040);
+    fbdraw_fill_rect(ui->drawer, battery_level_x + 130, battery_level_y, (battery_level_width * battery_level) / 100, battery_level_height, battery_bar_color);
+}
+
 void ui_start_transition(ui_t *ui,transition_state_t state){
     ui->transition_state = state;
     ui->transition_start_time = get_now_us();
@@ -401,9 +443,10 @@ void ui_tick(ui_t *ui){
     if (ui->state != UI_STATE_DISPLAY_PIC) {
         fbdraw_fill_rect(ui->drawer, 0, 0, g_fbdraw.fb_width, g_fbdraw.fb_height, UI_BACKGROUND_COLOR);
         fbdraw_draw_bitmap_1_bit(ui->drawer, 10, 0, gImage_prts_logo, 340, 120,UI_BACKGROUND_COLOR,UI_TEXT_COLOR);
-        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 110, "PRTS Terminal Application");
-        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 80, EPASS_GIT_VERSION);
-        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 50, "(c) 1097 Rhodes Island.");
+        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 90, "PRTS Terminal Application");
+        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 60, EPASS_GIT_VERSION);
+        CRREFont_printStr(ui->font, 10, UI_HEIGHT - 30, "(c) 1097 Rhodes Island.");
+        draw_battery_level(ui);
     }
 
     switch (ui->state) {
