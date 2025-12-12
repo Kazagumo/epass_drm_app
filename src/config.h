@@ -37,6 +37,7 @@
 #define UI_BATTERY_ADC_CHARGING_VALUE 2650
 
 #define PRTS_ASSET_PATH "/assets"
+#define PRTS_AUX_ASSET_PATH "/sd/assets"
 #define PRTS_MAX_OPERATORS 50
 #define PRTS_OVERLAY_FILENAME "overlay.argb"
 #define PRTS_INTRO_VIDEO_FILENAME "intro.mp4"

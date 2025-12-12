@@ -77,13 +77,41 @@ static operator_entry_t* load_operator_entry(char *path){
     return entry;
 }
 
-void prts_scan_assets(prts_t *prts){
+static char list_buf[4096];
+char* prts_list_operators(prts_t *prts){
+    int current_loc = 0;
+    for(int i = 0; i < prts->operator_entries_count; i++){
+        int operator_flag = 0;
+        if(prts->operator_entries[i]->has_overlay_img){
+            operator_flag |= 0x1;
+        }
+        if(prts->operator_entries[i]->has_intro_video){
+            operator_flag |= 0x10;
+        }
+        if(prts->operator_entries[i]->has_intro_logo){
+            operator_flag |= 0x100;
+        }
+        snprintf(list_buf+current_loc, sizeof(list_buf)-current_loc, "%d: %s, %x\n   %lld ms, c:%x\n", i, 
+            prts->operator_entries[i]->path, 
+            operator_flag, 
+            prts->operator_entries[i]->intro_video_duration / 1000, 
+            prts->operator_entries[i]->background_color
+        );
+        current_loc += strlen(list_buf+current_loc);
+        
+    }
+    list_buf[current_loc] = '\0';
+    return list_buf;
+}
+
+
+void prts_scan_assets(prts_t *prts,char* dirpath){
     char path[128];
-    DIR *dir = opendir(PRTS_ASSET_PATH);
+    DIR *dir = opendir(dirpath);
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL){
         if(entry->d_type == DT_DIR){
-            snprintf(path, sizeof(path), "%s/%s", PRTS_ASSET_PATH, entry->d_name);
+            snprintf(path, sizeof(path), "%s/%s", dirpath, entry->d_name);
             operator_entry_t* ret = load_operator_entry(path);
             if(ret != NULL){
                 prts->operator_entries[prts->operator_entries_count++] = ret;

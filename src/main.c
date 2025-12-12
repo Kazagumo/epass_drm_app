@@ -77,11 +77,19 @@ bool ui_blocked(){
     return g_prts.status != PRTS_STATUS_IDLE;
 }
 
+char* get_operator_list(){
+    return prts_list_operators(&g_prts);
+}
+
 int main(int argc, char *argv[]){
+    int use_aux_assets = 0;
     if(argc == 2){
         if(strcmp(argv[1], "version") == 0){
             log_info("EPASS_GIT_VERSION: %s", EPASS_GIT_VERSION);
             return 0;
+        }
+        else if(strcmp(argv[1], "aux") == 0){
+            use_aux_assets = 1;
         }
     }
     log_info("starting up prts terminal application: %s", EPASS_GIT_VERSION);
@@ -90,7 +98,11 @@ int main(int argc, char *argv[]){
     signal(SIGTERM, signal_handler);
 
     prts_init(&g_prts, &g_ui, &g_mediaplayer);
-    prts_scan_assets(&g_prts);
+    prts_scan_assets(&g_prts,PRTS_ASSET_PATH);
+    if(use_aux_assets){
+        log_info("using aux assets");
+        prts_scan_assets(&g_prts,PRTS_AUX_ASSET_PATH);
+    }
     if(g_prts.operator_entries_count == 0){
         log_error("no operator assets found");
         printf(" _   _ _____  ______  ___ _____ ___  \n");
@@ -102,6 +114,11 @@ int main(int argc, char *argv[]){
         printf("No operator assets found. Please check the assets directory.\n");
         return -1;
     }
+
+    char* list = prts_list_operators(&g_prts);
+    log_info("operators list:\n", list);
+    puts(list);
+    
 
     /* initialize DRM */
     if (drm_warpper_init(&g_drm_warpper) != 0) {

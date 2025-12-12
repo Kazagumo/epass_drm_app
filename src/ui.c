@@ -20,6 +20,7 @@ extern void next_video();
 extern void prev_video();
 extern void enter_usb_download();
 extern bool ui_blocked();
+extern char* get_operator_list();
 
 
 long long get_now_us(void)
@@ -40,8 +41,14 @@ const char *ui_mainmenu_text[] = {
     "Brightness",
     "Switch Interval",
     "Switch Mode",
-    "USB Download"
+    "USB Download",
+    "Operator List"
 };
+
+static void ui_draw_operator_list(ui_t *ui){
+    CRREFont_printStr(ui->font, 10, UI_Y_OFFSET + 10, "====== OPERATOR LIST ======");
+    CRREFont_printStr(ui->font, 10, UI_Y_OFFSET + 50, get_operator_list());
+}
 
 static void ui_draw_mainmenu(ui_t *ui){
     CRREFont_printStr(ui->font, 10, UI_Y_OFFSET + 10, "====== MAIN MENU ======");
@@ -175,7 +182,7 @@ static void ui_handle_key(ui_t *ui, int key){
             if (key == KEY_1) {
                 if (ui->hover_index > 0) ui->hover_index--;
             } else if (key == KEY_2) {
-                if (ui->hover_index < 3) ui->hover_index++;
+                if (ui->hover_index < 4) ui->hover_index++;
             } else if (key == KEY_3) {
                 switch (ui->hover_index) {
                     case 0:
@@ -191,6 +198,9 @@ static void ui_handle_key(ui_t *ui, int key){
                         break;
                     case 3:
                         enter_usb_download();
+                        break;
+                    case 4:
+                        ui->state = UI_STATE_OPERATOR_LIST;
                         break;
                 }
             } else if (key == KEY_4) {
@@ -252,6 +262,9 @@ static void ui_handle_key(ui_t *ui, int key){
             break;
         case UI_STATE_DISPLAY_PIC: 
             ui->state = UI_STATE_NONE;
+            break;
+        case UI_STATE_OPERATOR_LIST:
+            ui->state = UI_STATE_MAINMENU;
             break;
         default:
             break;
@@ -464,6 +477,9 @@ void ui_tick(ui_t *ui){
             break;
         case UI_STATE_DISPLAY_PIC:
             ui_draw_display_pic(ui);
+            break;
+        case UI_STATE_OPERATOR_LIST:
+            ui_draw_operator_list(ui);
             break;
         case UI_STATE_NONE:
             break;

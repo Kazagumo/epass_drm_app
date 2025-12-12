@@ -36,7 +36,8 @@ typedef struct {
 } prts_t;
 
 void prts_init(prts_t *prts,ui_t *ui,mediaplayer_t *mp);
-void prts_scan_assets(prts_t *prts);
+void prts_scan_assets(prts_t *prts,char* dirpath);
+char* prts_list_operators(prts_t *prts);
 void prts_next_operator(prts_t *prts);
 void prts_prev_operator(prts_t *prts);
 void prts_tick(prts_t *prts);

@@ -9,6 +9,7 @@ typedef enum {
     UI_STATE_SWITCH_INTERVAL,
     UI_STATE_SWITCH_MODE,
     UI_STATE_DISPLAY_PIC,
+    UI_STATE_OPERATOR_LIST,
     UI_STATE_NONE,
 } ui_state_t;
 
